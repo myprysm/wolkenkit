@@ -1,11 +1,7 @@
-import { AggregateService } from '../services/AggregateService';
-import { AggregatesService } from '../services/AggregatesService';
-import { ClientService } from '../services/ClientService';
 import { CommandData } from './CommandData';
+import { CommandMiddleware } from './CommandMiddleware';
+import { CommandServices } from './CommandServices';
 import { CommandWithMetadata } from './CommandWithMetadata';
-import { ErrorService } from '../services/ErrorService';
-import { LockService } from '../services/LockService';
-import { LoggerService } from '../services/LoggerService';
 import { Schema } from './Schema';
 import { State } from './State';
 
@@ -14,18 +10,9 @@ export interface CommandHandler<TState extends State, TCommandData extends Comma
 
   getSchema? (): Schema;
 
-  isAuthorized (state: TState, command: CommandWithMetadata<TCommandData>, services: {
-    aggregates: AggregatesService;
-    client: ClientService;
-    logger: LoggerService;
-  }): boolean | Promise<boolean>;
+  middleware?: CommandMiddleware<TState, TCommandData>[];
 
-  handle (state: TState, command: CommandWithMetadata<TCommandData>, services: {
-    aggregate: AggregateService<TState>;
-    aggregates: AggregatesService;
-    client: ClientService;
-    error: ErrorService;
-    lock: LockService;
-    logger: LoggerService;
-  }): void | Promise<void>;
+  isAuthorized (state: TState, command: CommandWithMetadata<TCommandData>, services: CommandServices<TState>): boolean | Promise<boolean>;
+
+  handle (state: TState, command: CommandWithMetadata<TCommandData>, services: CommandServices<TState>): void | Promise<void>;
 }

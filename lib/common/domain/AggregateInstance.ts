@@ -1,6 +1,7 @@
 import { AggregateIdentifier } from '../elements/AggregateIdentifier';
 import { ApplicationDefinition } from '../application/ApplicationDefinition';
 import { CommandData } from '../elements/CommandData';
+import { CommandMiddleware } from '../elements/CommandMiddleware';
 import { CommandWithMetadata } from '../elements/CommandWithMetadata';
 import { ContextIdentifier } from '../elements/ContextIdentifier';
 import { DomainEvent } from '../elements/DomainEvent';
@@ -20,6 +21,7 @@ import { getLockService } from '../services/getLockService';
 import { GetLockService } from '../services/types/GetLockService';
 import { getLoggerService } from '../services/getLoggerService';
 import { GetLoggerService } from '../services/types/GetLoggerService';
+import { invokeMiddleware } from './invokeMiddleware';
 import { LockStore } from '../../stores/lockStore/LockStore';
 import { Repository } from './Repository';
 import { Snapshot } from '../../stores/domainEventStore/Snapshot';
@@ -251,15 +253,24 @@ class AggregateInstance<TState extends State> {
     try {
       const clonedCommand = cloneDeep(command);
 
-      const isAuthorized = await commandHandler.isAuthorized(this.state, clonedCommand, services);
+      const handleAuthorizationMiddleware: CommandMiddleware<State, CommandData> = async (state, middlewareCommand, middlewareServices, next): Promise<void> => {
+        const isAuthorized = await commandHandler.isAuthorized(state, middlewareCommand, middlewareServices);
 
-      if (!isAuthorized) {
-        throw new errors.CommandNotAuthorized();
-      }
+        if (!isAuthorized) {
+          throw new errors.CommandNotAuthorized();
+        }
 
-      await commandHandler.handle(this.state, clonedCommand, services);
+        return next();
+      };
 
-      await this.storeCurrentAggregateState();
+      const handleCommandMiddleware: CommandMiddleware<State, CommandData> = async (state, middlewareCommand, middlewareServices): Promise<void> => {
+        await commandHandler.handle(state, middlewareCommand, middlewareServices);
+        await this.storeCurrentAggregateState();
+      };
+      const middleware = [ handleAuthorizationMiddleware, ...commandHandler.middleware ?? [], handleCommandMiddleware ];
+
+      await invokeMiddleware(middleware, this.state, clonedCommand, services);
+
       domainEvents = this.unstoredDomainEvents;
     } catch (ex) {
       switch (ex.code) {

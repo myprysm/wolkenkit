@@ -1,5 +1,5 @@
 import { errors } from '../errors';
-import { isFunction, isObjectLike, isUndefined } from 'lodash';
+import { isArray, isFunction, isObjectLike, isUndefined } from 'lodash';
 
 const validateCommandHandler = function ({ commandHandler }: {
   commandHandler: any;
@@ -31,6 +31,16 @@ const validateCommandHandler = function ({ commandHandler }: {
   if (commandHandler.getSchema) {
     if (!isFunction(commandHandler.getSchema)) {
       throw new errors.CommandHandlerMalformed(`Property 'getSchema' is not a function.`);
+    }
+  }
+
+  if (commandHandler.middleware) {
+    if (!isArray(commandHandler.middleware)) {
+      throw new errors.CommandHandlerMalformed(`Property 'middleware' is not an array.`);
+    }
+
+    if (!commandHandler.middleware.every((middleware: any): boolean => isFunction(middleware))) {
+      throw new errors.CommandHandlerMalformed(`Property 'middleware' should contain only functions.`);
     }
   }
 };

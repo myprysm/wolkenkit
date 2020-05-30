@@ -148,6 +148,14 @@ suite('getApplicationDefinition', (): void => {
     });
   });
 
+  test('throws an error if a command middleware is invalid.', async (): Promise<void> => {
+    const applicationDirectory = getTestApplicationDirectory({ name: 'withInvalidCommandMiddleware' });
+
+    await assert.
+      that(async (): Promise<any> => getApplicationDefinition({ applicationDirectory })).
+      is.throwingAsync(`Aggregate definition '<app>/build/domain/sampleContext/sampleAggregate' is malformed: Command handler 'invalidMiddleware' is malformed: Property 'middleware' should contain only functions.`);
+  });
+
   test('throws an error if the domain directory is missing.', async (): Promise<void> => {
     const applicationDirectory = getTestApplicationDirectory({ name: 'withoutDomainDirectory' });
 

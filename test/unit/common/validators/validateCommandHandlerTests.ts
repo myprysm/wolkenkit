@@ -83,4 +83,35 @@ suite('validateCommandHandler', (): void => {
       }});
     }).is.throwing((ex): boolean => (ex as CustomError).code === 'ECOMMANDHANDLERMALFORMED' && ex.message === `Property 'getSchema' is not a function.`);
   });
+
+  test('throws an error if middleware is not an array.', async (): Promise<void> => {
+    assert.that((): void => {
+      validateCommandHandler({ commandHandler: {
+        ...commandHandler,
+        middleware: {}
+      }});
+    }).is.throwing((ex): boolean => (ex as CustomError).code === 'ECOMMANDHANDLERMALFORMED' && ex.message === `Property 'middleware' is not an array.`);
+  });
+
+  test('throws an error if middleware does not contain only functions.', async (): Promise<void> => {
+    assert.that((): void => {
+      validateCommandHandler({ commandHandler: {
+        ...commandHandler,
+        middleware: [ 1 ]
+      }});
+    }).is.throwing((ex): boolean => (ex as CustomError).code === 'ECOMMANDHANDLERMALFORMED' && ex.message === `Property 'middleware' should contain only functions.`);
+  });
+
+  test('does not throw an error when valid middleware is provided.', async (): Promise<void> => {
+    assert.that((): void => {
+      validateCommandHandler({ commandHandler: {
+        ...commandHandler,
+        middleware: [
+          function (): void {
+            // Intentionally left blank.
+          }
+        ]
+      }});
+    }).is.not.throwing();
+  });
 });
