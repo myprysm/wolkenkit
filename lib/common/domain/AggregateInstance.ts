@@ -267,7 +267,9 @@ class AggregateInstance<TState extends State> {
         await commandHandler.handle(state, middlewareCommand, middlewareServices);
         await this.storeCurrentAggregateState();
       };
-      const middleware = [ handleAuthorizationMiddleware, ...commandHandler.middleware ?? [], handleCommandMiddleware ];
+
+      // Middleware is ensured to be defined during bootstrap.
+      const middleware = [ handleAuthorizationMiddleware, ...commandHandler.middleware as [], handleCommandMiddleware ];
 
       await invokeMiddleware(middleware, this.state, clonedCommand, services);
 

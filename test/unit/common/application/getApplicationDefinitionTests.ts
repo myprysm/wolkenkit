@@ -148,6 +148,25 @@ suite('getApplicationDefinition', (): void => {
     });
   });
 
+  test('applies global command middleware.', async (): Promise<void> => {
+    const applicationDirectory = getTestApplicationDirectory({ name: 'withGlobalMiddleware' });
+    const applicationDefinition = await getApplicationDefinition({ applicationDirectory });
+
+    for (const handler of [ 'authenticate', 'authorize', 'execute' ]) {
+      const commandMiddleware = applicationDefinition.domain.sampleContext.sampleAggregate.commandHandlers[handler].middleware;
+
+      assert.that(commandMiddleware?.length).is.equalTo(1);
+    }
+  });
+
+  test('throws an error if a global middleware is invalid.', async (): Promise<void> => {
+    const applicationDirectory = getTestApplicationDirectory({ name: 'withInvalidGlobalMiddleware' });
+
+    await assert.
+      that(async (): Promise<any> => getApplicationDefinition({ applicationDirectory })).
+      is.throwingAsync(`Middleware definition in '<app>/build/server/middleware' is malformed: Property 'command' should contain only functions.`);
+  });
+
   test('throws an error if a command middleware is invalid.', async (): Promise<void> => {
     const applicationDirectory = getTestApplicationDirectory({ name: 'withInvalidCommandMiddleware' });
 

@@ -1,6 +1,6 @@
 'use strict';
 
-const { precondition } = require('../middleware');
+const { precondition } = require('../../../../middleware/command/precondition');
 
 const send = {
   getSchema () {

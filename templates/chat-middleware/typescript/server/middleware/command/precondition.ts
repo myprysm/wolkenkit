@@ -1,4 +1,4 @@
-import {CommandData, CommandMiddleware, CommandServices, CommandWithMetadata, State} from 'wolkenkit';
+import { CommandData, CommandMiddleware, CommandServices, CommandWithMetadata, State } from 'wolkenkit';
 
 type CommandPreCondition<TState extends State, TCommandData extends CommandData> = ({ state, command, services }: {
     state: TState;

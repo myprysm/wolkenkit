@@ -1,6 +1,6 @@
 import { CommandData, CommandHandler, Schema } from 'wolkenkit';
 import { MessageState } from '../MessageState';
-import { precondition } from '../middlewares/precondition';
+import { precondition } from '../../../../middleware/command/precondition';
 import { SentData } from '../domainEvents/sent';
 
 

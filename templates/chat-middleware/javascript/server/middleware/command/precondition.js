@@ -12,4 +12,4 @@ const precondition = function (predicate, message = 'Command failed.') {
     }
 }
 
-export { precondition };
+module.exports = { precondition };

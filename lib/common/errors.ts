@@ -43,6 +43,7 @@ const errors = defekt({
   ItemNotFound: {},
   ItemNotLocked: {},
   LockExpired: {},
+  MiddlewareDefinitionMalformed: {},
   NotAuthenticatedError: {},
   ParameterInvalid: {},
   ProjectionHandlerMalformed: {},

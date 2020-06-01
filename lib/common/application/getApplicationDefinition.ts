@@ -5,10 +5,13 @@ import { exists } from '../utils/fs/exists';
 import { getDomainDefinition } from './getDomainDefinition';
 import { getViewsDefinition } from './getViewsDefinition';
 import path from 'path';
+import { withMiddleware } from '../../tools/withMiddleware';
 import { withSystemDomainEvents } from '../../tools/withSystemDomainEvents';
+import { getDefaultMiddleware, getMiddlewareDefinition } from './getMiddlewareDefinition';
 
-const getApplicationDefinition = async function ({ applicationDirectory }: {
+const getApplicationDefinition = async function ({ applicationDirectory, enableGlobalMiddleware = true }: {
   applicationDirectory: string;
+  enableGlobalMiddleware?: boolean;
 }): Promise<ApplicationDefinition> {
   if (!await exists({ path: applicationDirectory })) {
     throw new errors.ApplicationNotFound();
@@ -28,12 +31,15 @@ const getApplicationDefinition = async function ({ applicationDirectory }: {
 
   const domainDirectory = path.join(serverDirectory, 'domain');
   const viewsDirectory = path.join(serverDirectory, 'views');
+  const middlewareDirectory = path.join(serverDirectory, 'middleware');
 
   const domainDefinition = await getDomainDefinition({ domainDirectory });
   const viewsDefinition = await getViewsDefinition({ viewsDirectory });
+  const middlewareDefinition = enableGlobalMiddleware ? await getMiddlewareDefinition({ middlewareDirectory }) : getDefaultMiddleware();
 
   const applicationEnhancers: ApplicationEnhancer[] = [
-    withSystemDomainEvents
+    withSystemDomainEvents,
+    withMiddleware(middlewareDefinition)
   ];
 
   const rawApplicationDefinition: ApplicationDefinition = {
