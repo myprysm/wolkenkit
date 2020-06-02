@@ -127,26 +127,45 @@ class MongoDbLockStore implements LockStore {
       throw new errors.ExpirationInPast('Cannot acquire a lock in the past.');
     }
 
+    /* eslint-disable id-length */
+    const session = this.client.startSession({
+      defaultTransactionOptions: {
+        readPreference: 'primary',
+        readConcern: {
+          level: 'local'
+        },
+        writeConcern: {
+          w: 'majority'
+        }
+      }
+    });
+    /* eslint-enable id-length */
+
     const query = {
       name
     };
-    const entry = await this.collections.locks.findOne(query);
 
-    if (entry) {
-      const isLocked = Date.now() < entry.expiresAt;
+    try {
+      const entry = await this.collections.locks.findOne(query);
 
-      if (isLocked) {
-        throw new errors.AcquireLockFailed('Failed to acquire lock.');
+      if (entry) {
+        const isLocked = Date.now() < entry.expiresAt;
+
+        if (isLocked) {
+          throw new errors.AcquireLockFailed('Failed to acquire lock.');
+        }
       }
+
+      const $set = {
+        ...query,
+        nonce: this.nonce,
+        expiresAt
+      };
+
+      await this.collections.locks.updateOne(query, { $set }, { upsert: true });
+    } finally {
+      session.endSession();
     }
-
-    const $set = {
-      ...query,
-      nonce: this.nonce,
-      expiresAt
-    };
-
-    await this.collections.locks.updateOne(query, { $set }, { upsert: true });
   }
 
   public async isLocked ({ name }: {
@@ -175,25 +194,44 @@ class MongoDbLockStore implements LockStore {
       throw new errors.ExpirationInPast('Cannot acquire a lock in the past.');
     }
 
+    /* eslint-disable id-length */
+    const session = this.client.startSession({
+      defaultTransactionOptions: {
+        readPreference: 'primary',
+        readConcern: {
+          level: 'local'
+        },
+        writeConcern: {
+          w: 'majority'
+        }
+      }
+    });
+    /* eslint-enable id-length */
+
     const query = {
       name
     };
-    const entry = await this.collections.locks.findOne(query, {
-      projection: {
-        _id: 0,
-        expiresAt: 1,
-        nonce: 1
+
+    try {
+      const entry = await this.collections.locks.findOne(query, {
+        projection: {
+          _id: 0,
+          expiresAt: 1,
+          nonce: 1
+        }
+      });
+
+      if (!entry) {
+        throw new errors.RenewLockFailed('Failed to renew lock.');
       }
-    });
+      if (entry.expiresAt < Date.now() || this.nonce !== entry.nonce) {
+        throw new errors.RenewLockFailed('Failed to renew lock.');
+      }
 
-    if (!entry) {
-      throw new errors.RenewLockFailed('Failed to renew lock.');
+      await this.collections.locks.updateOne(query, { $set: { expiresAt }});
+    } finally {
+      session.endSession();
     }
-    if (entry.expiresAt < Date.now() || this.nonce !== entry.nonce) {
-      throw new errors.RenewLockFailed('Failed to renew lock.');
-    }
-
-    await this.collections.locks.updateOne(query, { $set: { expiresAt }});
   }
 
   public async releaseLock ({ name }: {
@@ -203,22 +241,40 @@ class MongoDbLockStore implements LockStore {
       throw new errors.LockNameTooLong('Lock name is too long.');
     }
 
-    const entry = await this.collections.locks.findOne({ name }, {
-      projection: {
-        _id: 0,
-        expiresAt: 1,
-        nonce: 1
+    /* eslint-disable id-length */
+    const session = this.client.startSession({
+      defaultTransactionOptions: {
+        readPreference: 'primary',
+        readConcern: {
+          level: 'local'
+        },
+        writeConcern: {
+          w: 'majority'
+        }
       }
     });
+    /* eslint-enable id-length */
 
-    if (!entry) {
-      return;
-    }
-    if (Date.now() < entry.expiresAt && this.nonce !== entry.nonce) {
-      throw new errors.ReleaseLockFailed('Failed to release lock.');
-    }
+    try {
+      const entry = await this.collections.locks.findOne({ name }, {
+        projection: {
+          _id: 0,
+          expiresAt: 1,
+          nonce: 1
+        }
+      });
 
-    await this.collections.locks.deleteOne({ name });
+      if (!entry) {
+        return;
+      }
+      if (Date.now() < entry.expiresAt && this.nonce !== entry.nonce) {
+        throw new errors.ReleaseLockFailed('Failed to release lock.');
+      }
+
+      await this.collections.locks.deleteOne({ name });
+    } finally {
+      session.endSession();
+    }
   }
 
   public async destroy (): Promise<void> {
